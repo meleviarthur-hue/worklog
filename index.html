@@ -14,7 +14,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
-<link rel="stylesheet" href="style.css?v=12">
+<link rel="stylesheet" href="style.css?v=15">
 </head>
 <body>
 
@@ -59,7 +59,7 @@
     <footer class="site-foot">
       <div class="sf-line">
         <span class="sf-mark">工时</span>
-        <span class="sf-ver" id="verText">v2.1</span>
+        <span class="sf-ver" id="verText">v3.0</span>
       </div>
       <div class="sf-line sf-by">
         made by 杨青
@@ -82,6 +82,10 @@
     <div id="dayShifts"></div>
 
     <button class="btn primary block" id="btnAddShift">+ 记录班次</button>
+
+    <button class="btn block" id="btnMult">
+      加班倍率：<b id="multLabel">工作日 1.5×</b>
+    </button>
 
     <div class="day-sum">
       <div class="cf-item"><span class="cf-label">当日工时</span><b id="dHours">0.00 h</b></div>
@@ -120,7 +124,10 @@
     <div class="rows">
       <div class="row"><span>白班薪资</span><b id="stDayPay">¥0.00</b></div>
       <div class="row"><span>夜班薪资</span><b id="stNightPay">¥0.00</b></div>
-      <div class="row"><span>加班补贴</span><b id="stOT">¥0.00</b></div>
+      <div class="row"><span>加班费</span><b id="stOT">¥0.00</b></div>
+      <div class="row ot-sub"><span>· 工作日 1.5×</span><b id="stOTWork">¥0.00</b></div>
+      <div class="row ot-sub"><span>· 周末 2×</span><b id="stOTWeekend">¥0.00</b></div>
+      <div class="row ot-sub"><span>· 节假日</span><b id="stOTHoliday">¥0.00</b></div>
       <div class="row strong"><span>应发小计</span><b id="stGross">¥0.00</b></div>
     </div>
 
@@ -182,17 +189,40 @@
       <div class="hint">夜班通常按不低于白班的 1.2 倍设置。</div>
     </div>
 
-    <div class="sec-title">加班</div>
+    <div class="sec-title">计薪方式</div>
     <div class="card">
       <div class="field">
-        <span>超过多少小时算加班</span>
-        <input type="number" id="setOTAfter" step="0.5" inputmode="decimal">
+        <span>你是哪种</span>
+        <div class="seg" id="segPayType">
+          <button class="seg-btn active" data-val="formal">正式工</button>
+          <button class="seg-btn" data-val="hourly">小时工</button>
+        </div>
       </div>
-      <div class="field">
-        <span>加班倍率</span>
-        <input type="number" id="setOTRate" step="0.1" inputmode="decimal">
+      <div class="hint" id="payTypeHint">
+        正式工：工作日 1.5× · 周末 2× · 节假日可在日历里单独标记。
       </div>
-      <div class="hint">不想算加班费，倍率填 1 即可。</div>
+    </div>
+
+    <div id="otBox">
+      <div class="sec-title">加班规则</div>
+      <div class="card">
+        <div class="field">
+          <span>超过多少小时算加班</span>
+          <input type="number" id="setOTAfter" step="0.5" inputmode="decimal">
+        </div>
+        <div class="field">
+          <span>工作日倍率</span>
+          <input type="number" id="setOTWorkday" step="0.1" inputmode="decimal">
+        </div>
+        <div class="field">
+          <span>周末倍率（六 / 日）</span>
+          <input type="number" id="setOTWeekend" step="0.1" inputmode="decimal">
+        </div>
+        <div class="hint">
+          法定节假日在日历里点进当天单独设置倍率（通常是 3×）。
+          不想算加班费，把倍率都填 1 即可。
+        </div>
+      </div>
     </div>
 
     <div class="sec-title">扣款项</div>
@@ -267,6 +297,26 @@
   </div>
 </div>
 
+<!-- ============ 倍率选择弹窗 ============ -->
+<div id="multPop" class="pop-wrap">
+  <div class="pop-scrim"></div>
+  <div class="pop-card">
+    <div class="pop-title">这天算几倍加班？</div>
+    <div class="mult-grid" id="multGrid">
+      <button class="mult-opt" data-val="1">1×<i>不加班</i></button>
+      <button class="mult-opt" data-val="1.5">1.5×<i>工作日</i></button>
+      <button class="mult-opt" data-val="2">2×<i>周末</i></button>
+      <button class="mult-opt" data-val="3">3×<i>法定节假日</i></button>
+    </div>
+    <div class="field" style="width:100%">
+      <span>自定义倍率</span>
+      <input type="number" id="multCustom" step="0.1" inputmode="decimal" placeholder="如 2.5">
+    </div>
+    <button class="btn block" id="multReset">恢复默认（按星期自动判断）</button>
+    <button class="btn block" id="multClose">关闭</button>
+  </div>
+</div>
+
 <!-- ============ 赞赏码弹窗 ============ -->
 <div id="rewardPop" class="pop-wrap">
   <div class="pop-scrim"></div>
@@ -278,7 +328,7 @@
   </div>
 </div>
 
-<script src="app.js?v=12"></script>
+<script src="app.js?v=15"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {

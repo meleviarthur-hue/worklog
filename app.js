@@ -9,7 +9,11 @@ const DEFAULTS = {
     dayStart: '08:00', dayEnd: '20:00', dayBreak: 0,
     nightStart: '20:00', nightEnd: '08:00', nightBreak: 0,
     dayRate: 20, nightRate: 25,
-    otAfter: 8, otRate: 1.5
+    payType: 'formal',                        // formal 正式工 / hourly 小时工
+    otAfter: 8,
+    otWorkday: 1.5,                           // 工作日加班倍率
+    otWeekend: 2,                             // 周末加班倍率
+    overrides: {}                             // { '2026-10-01': 3 } 手动覆盖倍率
   },
   deductions: [
     { id: 'd_si',   name: '社保', mode: 'fixed',   value: 300, enabled: true },
@@ -31,8 +35,16 @@ function load() {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return clone(DEFAULTS);
     const s = JSON.parse(raw);
+    const st = Object.assign({}, DEFAULTS.settings, s.settings || {});
+    // 老数据迁移：旧的单一 otRate → 新的三档倍率
+    if (s.settings && s.settings.otRate != null && s.settings.otWorkday == null) {
+      st.otWorkday = s.settings.otRate;
+      st.otWeekend = 2;
+    }
+    delete st.otRate;
+    if (!st.overrides || typeof st.overrides !== 'object') st.overrides = {};
     return {
-      settings: Object.assign({}, DEFAULTS.settings, s.settings || {}),
+      settings: st,
       deductions: Array.isArray(s.deductions) ? s.deductions : clone(DEFAULTS.deductions),
       shifts: Array.isArray(s.shifts) ? s.shifts : []
     };
@@ -60,6 +72,22 @@ function r2(n) { return Math.round(n * 100) / 100; }
 function uid() { return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
 /* ---------- 计算 ---------- */
+/**
+ * 判断某天的加班倍率
+ * 小时工 → 恒为 1（不算加班费）
+ * 正式工 → 该日手动覆盖 > 周末(2×) > 工作日(1.5×)
+ * 返回 { mult, kind }  kind: 'work' | 'weekend' | 'manual' | 'hourly'
+ */
+function dayMult(dateStr) {
+  const st = state.settings;
+  if (st.payType === 'hourly') return { mult: 1, kind: 'hourly' };
+  const ov = st.overrides && st.overrides[dateStr];
+  if (ov != null && ov !== '') return { mult: Number(ov), kind: 'manual' };
+  const dow = parseD(dateStr).getDay();          // 0=日 6=六
+  if (dow === 0 || dow === 6) return { mult: Number(st.otWeekend) || 2, kind: 'weekend' };
+  return { mult: Number(st.otWorkday) || 1.5, kind: 'work' };
+}
+
 function calcShift(sh) {
   const st = state.settings;
   let mins = toMin(sh.end) - toMin(sh.start);
@@ -70,12 +98,18 @@ function calcShift(sh) {
   const hours = mins / 60;
   const rate = (sh.rate !== '' && sh.rate != null && !isNaN(Number(sh.rate)))
     ? Number(sh.rate) : (sh.type === 'night' ? Number(st.nightRate) : Number(st.dayRate));
+
   const otAfter = Number(st.otAfter) || 0;
-  const otRate = Number(st.otRate) || 1;
+  const dm = dayMult(sh.date);
+  const otRate = dm.mult;                        // 加班倍率随日期变化
   let baseH = hours, otH = 0;
   if (otAfter > 0 && hours > otAfter) { baseH = otAfter; otH = hours - otAfter; }
   const base = baseH * rate, ot = otH * rate * otRate;
-  return { hours: r2(hours), base: r2(base), ot: r2(ot), otHours: r2(otH), total: r2(base + ot), rate, cross };
+  return {
+    hours: r2(hours), base: r2(base), ot: r2(ot), otHours: r2(otH),
+    total: r2(base + ot), rate, cross,
+    otRate: otRate, otKind: dm.kind
+  };
 }
 
 function rangeOf(kind) {
@@ -88,12 +122,16 @@ function rangeLabel(kind) { return { week: '本周', month: '本月', all: '全�
 function summarize(shifts) {
   const a = {
     hours: 0, dayHours: 0, nightHours: 0, dayPay: 0, nightPay: 0,
-    ot: 0, base: 0, count: shifts.length, days: 0
+    ot: 0, otWork: 0, otWeekend: 0, otHoliday: 0, base: 0,
+    count: shifts.length, days: 0
   };
   const daySet = new Set(), dd = {};
   shifts.forEach(s => {
     const c = calcShift(s);
     a.hours += c.hours; a.base += c.base; a.ot += c.ot;
+    if (c.otKind === 'weekend') a.otWeekend += c.ot;
+    else if (c.otKind === 'manual') a.otHoliday += c.ot;
+    else a.otWork += c.ot;
     if (s.type === 'night') { a.nightHours += c.hours; a.nightPay += c.base; }
     else { a.dayHours += c.hours; a.dayPay += c.base; }
     daySet.add(s.date);
@@ -104,6 +142,7 @@ function summarize(shifts) {
   a.days = daySet.size;
   a.hours = r2(a.hours); a.dayHours = r2(a.dayHours); a.nightHours = r2(a.nightHours);
   a.dayPay = r2(a.dayPay); a.nightPay = r2(a.nightPay); a.ot = r2(a.ot); a.base = r2(a.base);
+  a.otWork = r2(a.otWork); a.otWeekend = r2(a.otWeekend); a.otHoliday = r2(a.otHoliday);
   a.gross = r2(a.base + a.ot);
 
   const detail = []; let deduct = 0;
@@ -212,6 +251,15 @@ function renderDay() {
   const agg = summarize(list);
   $('dHours').textContent = agg.hours.toFixed(2) + ' h';
   $('dPay').textContent = money(agg.gross);
+
+  // 倍率按钮
+  const dm = dayMult(selDate);
+  const LABEL = { work: '工作日', weekend: '周末', manual: '手动设置', hourly: '小时工' };
+  $('btnMult').style.display = (state.settings.payType === 'hourly') ? 'none' : '';
+  $('multLabel').textContent = `${LABEL[dm.kind]} ${dm.mult}×`;
+  document.querySelectorAll('#multGrid .mult-opt').forEach(b => {
+    b.classList.toggle('on', Math.abs(Number(b.dataset.val) - dm.mult) < 0.001 && dm.kind !== 'hourly');
+  });
 }
 
 /* ---------- 统计 ---------- */
@@ -229,6 +277,12 @@ function renderStats() {
   $('stDayPay').textContent = money(agg.dayPay);
   $('stNightPay').textContent = money(agg.nightPay);
   $('stOT').textContent = money(agg.ot);
+  $('stOTWork').textContent = money(agg.otWork);
+  $('stOTWeekend').textContent = money(agg.otWeekend);
+  $('stOTHoliday').textContent = money(agg.otHoliday);
+  // 小时工不显示加班拆分
+  const hourly = state.settings.payType === 'hourly';
+  document.querySelectorAll('.ot-sub').forEach(el => el.style.display = hourly ? 'none' : '');
   $('stGross').textContent = money(agg.gross);
 
   const MODE = { fixed: '固定', perDay: '/天', perHour: '/时', percent: '%' };
@@ -248,8 +302,23 @@ function renderSettings() {
   $('setDayBreak').value = s.dayBreak || 0;
   $('setNightBreak').value = s.nightBreak || 0;
   $('setDayRate').value = s.dayRate; $('setNightRate').value = s.nightRate;
-  $('setOTAfter').value = s.otAfter; $('setOTRate').value = s.otRate;
+  $('setOTAfter').value = s.otAfter;
+  $('setOTWorkday').value = s.otWorkday;
+  $('setOTWeekend').value = s.otWeekend;
+  setPayType(s.payType || 'formal', false);
   renderDeductions();
+}
+
+/** 计薪方式切换：小时工隐藏加班规则 */
+function setPayType(t, persist) {
+  state.settings.payType = t;
+  document.querySelectorAll('#segPayType .seg-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.val === t));
+  $('otBox').style.display = (t === 'hourly') ? 'none' : '';
+  $('payTypeHint').textContent = (t === 'hourly')
+    ? '小时工：按实际工时 × 时薪计算，不计加班费。'
+    : '正式工：工作日 1.5× · 周末 2× · 节假日可在日历里单独标记。';
+  if (persist) save();
 }
 
 const MODE_OPTIONS = [
@@ -424,12 +493,43 @@ document.addEventListener('DOMContentLoaded', () => {
     s.dayRate = Number($('setDayRate').value) || 0;
     s.nightRate = Number($('setNightRate').value) || 0;
     s.otAfter = Number($('setOTAfter').value) || 0;
-    s.otRate = Number($('setOTRate').value) || 1;
+    s.otWorkday = Number($('setOTWorkday').value) || 1.5;
+    s.otWeekend = Number($('setOTWeekend').value) || 2;
     save();
     const t = $('saveTip'); t.textContent = '已保存'; setTimeout(() => t.textContent = '', 1200);
   };
-  ['setDayStart', 'setDayEnd', 'setNightStart', 'setNightEnd', 'setDayBreak', 'setNightBreak', 'setDayRate', 'setNightRate', 'setOTAfter', 'setOTRate']
+  ['setDayStart', 'setDayEnd', 'setNightStart', 'setNightEnd', 'setDayBreak', 'setNightBreak', 'setDayRate', 'setNightRate', 'setOTAfter', 'setOTWorkday', 'setOTWeekend']
     .forEach(id => { $(id).addEventListener('change', autoSave); });
+
+  // 计薪方式
+  document.querySelectorAll('#segPayType .seg-btn').forEach(b => {
+    b.onclick = () => setPayType(b.dataset.val, true);
+  });
+
+  // 倍率选择
+  $('btnMult').onclick = () => {
+    $('multCustom').value = '';
+    $('multPop').classList.add('show');
+  };
+  $('multClose').onclick = () => $('multPop').classList.remove('show');
+  document.querySelector('#multPop .pop-scrim').onclick = () => $('multPop').classList.remove('show');
+  document.querySelectorAll('#multGrid .mult-opt').forEach(b => {
+    b.onclick = () => {
+      state.settings.overrides[selDate] = Number(b.dataset.val);
+      save(); $('multPop').classList.remove('show'); renderDay();
+    };
+  });
+  $('multCustom').addEventListener('change', () => {
+    const v = Number($('multCustom').value);
+    if (v > 0) {
+      state.settings.overrides[selDate] = v;
+      save(); $('multPop').classList.remove('show'); renderDay();
+    }
+  });
+  $('multReset').onclick = () => {
+    delete state.settings.overrides[selDate];
+    save(); $('multPop').classList.remove('show'); renderDay();
+  };
 
   // 扣款项
   $('btnAddDeduct').onclick = () => {
