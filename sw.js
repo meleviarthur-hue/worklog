@@ -1,14 +1,15 @@
 /* Service Worker：离线可用 */
-const CACHE = 'worklog-v7';
+const CACHE = 'worklog-v10';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=7',
-  './app.js?v=7',
+  './style.css?v=10',
+  './app.js?v=10',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
-  './icons/apple-touch-icon.png'
+  './icons/apple-touch-icon.png',
+  './icons/reward.png'
 ];
 
 self.addEventListener('install', e => {

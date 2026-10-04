@@ -14,7 +14,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
 
@@ -55,6 +55,20 @@
       <div class="cf-item"><span class="cf-label">本月应发</span><b id="mGross">¥0.00</b></div>
       <div class="cf-item"><span class="cf-label">本月实发</span><b id="mNet" class="em">¥0.00</b></div>
     </div>
+
+    <footer class="site-foot">
+      <div class="sf-line">
+        <span class="sf-mark">工时</span>
+        <span class="sf-ver" id="verText">v2.0 · 2026.10</span>
+      </div>
+      <div class="sf-line sf-by">
+        made by 杨青
+      </div>
+      <button class="sf-afdian" id="btnReward">
+        <span class="sf-heart">♡</span> 用爱发电 · 请我喝杯水
+      </button>
+      <div class="sf-tip">数据只存在这台手机本地，记得定期导出备份</div>
+    </footer>
   </section>
 
   <!-- ============ 某日 ============ -->
@@ -240,7 +254,18 @@
   </div>
 </div>
 
-<script src="app.js?v=7"></script>
+<!-- ============ 赞赏码弹窗 ============ -->
+<div id="rewardPop" class="pop-wrap">
+  <div class="pop-scrim"></div>
+  <div class="pop-card">
+    <div class="pop-title">请我喝杯水</div>
+    <img class="pop-qr" src="icons/reward.png" alt="赞赏码">
+    <div class="pop-sub">微信扫一扫 · 心意到了就好</div>
+    <button class="btn block" id="rewardClose">关闭</button>
+  </div>
+</div>
+
+<script src="app.js?v=10"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {

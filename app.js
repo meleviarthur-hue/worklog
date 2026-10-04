@@ -365,6 +365,11 @@ document.addEventListener('DOMContentLoaded', () => {
   $('setBack').onclick = () => go('calendar');
 
   $('btnAddShift').onclick = () => openSheet(null);
+
+  // 赞赏码
+  $('btnReward').onclick = () => $('rewardPop').classList.add('show');
+  $('rewardClose').onclick = () => $('rewardPop').classList.remove('show');
+  document.querySelector('#rewardPop .pop-scrim').onclick = () => $('rewardPop').classList.remove('show');
   $('dayShifts').addEventListener('click', e => {
     const el = e.target.closest('.shift'); if (el) openSheet(el.dataset.id);
   });
