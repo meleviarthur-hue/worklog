@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="工时">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)">
+<meta name="description" content="白夜班两班倒工时与薪资记录，数据本地保存">
+<title>工时</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="stylesheet" href="style.css?v=7">
+</head>
+<body>
+
+<header class="topbar">
+  <span class="brand">工时</span>
+  <span class="spacer"></span>
+  <button class="tbtn" id="btnStats">统计</button>
+  <button class="tbtn" id="btnSettings">设置</button>
+</header>
+
+<main id="main">
+
+  <!-- ============ 日历 ============ -->
+  <section class="view active" id="view-calendar">
+    <div class="cal-head">
+      <button class="nav" id="prevMonth">←</button>
+      <span class="cal-title" id="calTitle">2026年10月</span>
+      <button class="nav" id="nextMonth">→</button>
+      <span class="spacer"></span>
+      <button class="nav" id="btnToday">今天</button>
+    </div>
+
+    <div class="cal-week">
+      <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+
+    <div class="cal-legend">
+      <span class="lg"><i class="dot day"></i>白班</span>
+      <span class="lg"><i class="dot night"></i>夜班</span>
+      <span class="lg"><i class="dot both"></i>双班</span>
+      <span class="spacer"></span>
+      <span class="muted" id="monthTotal"></span>
+    </div>
+
+    <div class="cal-foot">
+      <div class="cf-item"><span class="cf-label">本月工时</span><b id="mHours">0.00 h</b></div>
+      <div class="cf-item"><span class="cf-label">本月应发</span><b id="mGross">¥0.00</b></div>
+      <div class="cf-item"><span class="cf-label">本月实发</span><b id="mNet" class="em">¥0.00</b></div>
+    </div>
+  </section>
+
+  <!-- ============ 某日 ============ -->
+  <section class="view" id="view-day">
+    <div class="day-head">
+      <button class="nav" id="dayBack">← 日历</button>
+      <span class="spacer"></span>
+      <span class="cal-title" id="dayTitle"></span>
+    </div>
+
+    <div id="dayShifts"></div>
+
+    <button class="btn primary block" id="btnAddShift">+ 记录班次</button>
+
+    <div class="day-sum">
+      <div class="cf-item"><span class="cf-label">当日工时</span><b id="dHours">0.00 h</b></div>
+      <div class="cf-item"><span class="cf-label">当日薪资</span><b id="dPay">¥0.00</b></div>
+    </div>
+  </section>
+
+  <!-- ============ 统计 ============ -->
+  <section class="view" id="view-stats">
+    <div class="day-head">
+      <button class="nav" id="statsBack">← 日历</button>
+      <span class="spacer"></span>
+      <span class="cal-title">统计</span>
+    </div>
+
+    <div class="seg" id="rangeSeg">
+      <button class="seg-btn active" data-range="month">本月</button>
+      <button class="seg-btn" data-range="week">本周</button>
+      <button class="seg-btn" data-range="all">全部</button>
+    </div>
+
+    <div class="hero">
+      <div class="hero-label">实发合计</div>
+      <div class="hero-value" id="stNet">¥0.00</div>
+    </div>
+
+    <div class="rows">
+      <div class="row"><span>总工时</span><b id="stHours">0.00 h</b></div>
+      <div class="row"><span>白班工时</span><b id="stDayHours">0.00 h</b></div>
+      <div class="row"><span>夜班工时</span><b id="stNightHours">0.00 h</b></div>
+      <div class="row"><span>出勤天数</span><b id="stDays">0 天</b></div>
+      <div class="row"><span>班次数量</span><b id="stCount">0</b></div>
+      <div class="row"><span>平均时薪</span><b id="stAvg">¥0.00</b></div>
+    </div>
+
+    <div class="rows">
+      <div class="row"><span>白班薪资</span><b id="stDayPay">¥0.00</b></div>
+      <div class="row"><span>夜班薪资</span><b id="stNightPay">¥0.00</b></div>
+      <div class="row"><span>加班补贴</span><b id="stOT">¥0.00</b></div>
+      <div class="row strong"><span>应发小计</span><b id="stGross">¥0.00</b></div>
+    </div>
+
+    <div class="rows" id="deductRows">
+      <div class="row strong"><span>扣款合计</span><b id="stDeduct" class="neg">-¥0.00</b></div>
+    </div>
+
+    <div class="hint">扣款项在「设置」里管理</div>
+  </section>
+
+  <!-- ============ 设置 ============ -->
+  <section class="view" id="view-settings">
+    <div class="day-head">
+      <button class="nav" id="setBack">← 日历</button>
+      <span class="spacer"></span>
+      <span class="cal-title">设置</span>
+    </div>
+
+    <div class="sec-title">默认班次时段</div>
+    <div class="card">
+      <div class="field">
+        <span>白班</span>
+        <div class="tline">
+          <input type="time" id="setDayStart"><i>–</i><input type="time" id="setDayEnd">
+        </div>
+      </div>
+      <div class="field">
+        <span>夜班</span>
+        <div class="tline">
+          <input type="time" id="setNightStart"><i>–</i><input type="time" id="setNightEnd">
+        </div>
+      </div>
+      <div class="hint">新建班次时自动填入这两个时段，不用每次改。</div>
+    </div>
+
+    <div class="sec-title">时薪</div>
+    <div class="card">
+      <div class="field">
+        <span>白班时薪 (¥/小时)</span>
+        <input type="number" id="setDayRate" step="0.01" inputmode="decimal">
+      </div>
+      <div class="field">
+        <span>夜班时薪 (¥/小时)</span>
+        <input type="number" id="setNightRate" step="0.01" inputmode="decimal">
+      </div>
+      <div class="hint">夜班通常按不低于白班的 1.2 倍设置。</div>
+    </div>
+
+    <div class="sec-title">加班</div>
+    <div class="card">
+      <div class="field">
+        <span>超过多少小时算加班</span>
+        <input type="number" id="setOTAfter" step="0.5" inputmode="decimal">
+      </div>
+      <div class="field">
+        <span>加班倍率</span>
+        <input type="number" id="setOTRate" step="0.1" inputmode="decimal">
+      </div>
+      <div class="hint">不想算加班费，倍率填 1 即可。</div>
+    </div>
+
+    <div class="sec-title">扣款项</div>
+    <div id="deductItems"></div>
+    <button class="btn ghost block" id="btnAddDeduct">+ 添加扣款项</button>
+
+    <div class="sec-title">数据</div>
+    <div class="card">
+      <button class="btn block" id="btnExport">导出 CSV</button>
+      <button class="btn block" id="btnBackup">导出 JSON 备份</button>
+      <button class="btn block" id="btnImport">导入 JSON 备份</button>
+      <input type="file" id="fileInput" accept=".json" hidden>
+    </div>
+
+    <div class="save-tip" id="saveTip"></div>
+  </section>
+
+</main>
+
+<!-- ============ 班次弹窗 ============ -->
+<div id="sheet" class="sheet-wrap">
+  <div class="sheet-scrim"></div>
+  <div class="sheet">
+    <div class="sheet-head">
+      <button class="sheet-cancel" id="sheetCancel">取消</button>
+      <span class="sheet-title" id="sheetTitle">记录班次</span>
+      <button class="sheet-save" id="sheetSave">完成</button>
+    </div>
+    <div class="sheet-body">
+      <div class="field">
+        <span>日期</span>
+        <input type="date" id="fDate">
+      </div>
+      <div class="field">
+        <span>班次</span>
+        <div class="seg" id="fType">
+          <button class="seg-btn active" data-val="day">白班</button>
+          <button class="seg-btn" data-val="night">夜班</button>
+        </div>
+      </div>
+      <div class="field">
+        <span>开始时间</span>
+        <input type="time" id="fStart">
+      </div>
+      <div class="field">
+        <span>结束时间</span>
+        <input type="time" id="fEnd">
+      </div>
+      <div class="hint" id="hourHint"></div>
+      <div class="field">
+        <span>休息扣除 (分钟)</span>
+        <input type="number" id="fBreak" step="5" inputmode="numeric" placeholder="0">
+      </div>
+      <div class="field">
+        <span>时薪覆盖 (留空用默认)</span>
+        <input type="number" id="fRate" step="0.01" inputmode="decimal" placeholder="默认">
+      </div>
+      <div class="field">
+        <span>备注</span>
+        <input type="text" id="fNote" placeholder="选填">
+      </div>
+
+      <div class="calc">
+        <div class="crow"><span>时长</span><b id="cHours">0.00 h</b></div>
+        <div class="crow"><span>基础薪资</span><b id="cBase">¥0.00</b></div>
+        <div class="crow"><span>加班补贴</span><b id="cOT">¥0.00</b></div>
+        <div class="crow strong"><span>本班合计</span><b id="cTotal">¥0.00</b></div>
+      </div>
+
+      <button class="btn danger block" id="btnDeleteShift" hidden>删除此班次</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js?v=7"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
