@@ -150,6 +150,9 @@ main{padding:16px;max-width:560px;margin:0 auto}
 .cf-item{display:flex;justify-content:space-between;padding:7px 0;font-size:13px}
 .cf-label{color:var(--muted)}
 .cf-item b{font-weight:600;font-variant-numeric:tabular-nums}
+/* 本月实发：绿色突出 + 上方留白分隔 */
+.cf-item.cf-net{margin-top:14px}
+.cf-item.cf-net b{color:var(--green)}
 
 /* ---- shift rows ---- */
 .shift{

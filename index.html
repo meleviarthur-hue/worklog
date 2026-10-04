@@ -14,7 +14,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
-<link rel="stylesheet" href="style.css?v=22">
+<link rel="stylesheet" href="style.css?v=23">
 </head>
 <body>
 
@@ -53,7 +53,7 @@
     <div class="cal-foot">
       <div class="cf-item"><span class="cf-label">本月工时</span><b id="mHours">0.00 h</b></div>
       <div class="cf-item"><span class="cf-label">本月应发</span><b id="mGross">¥0.00</b></div>
-      <div class="cf-item"><span class="cf-label">本月实发</span><b id="mNet" class="em">¥0.00</b></div>
+      <div class="cf-item cf-net"><span class="cf-label">本月实发</span><b id="mNet">¥0.00</b></div>
     </div>
 
     <footer class="site-foot">
@@ -315,7 +315,7 @@
   </div>
 </div>
 
-<script src="app.js?v=22"></script>
+<script src="app.js?v=23"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
