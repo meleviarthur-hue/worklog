@@ -13,6 +13,7 @@
   --day:#1f2328;               /* 白班：黑 */
   --night:#656d76;             /* 夜班：灰 */
   --neg:#cf222e;
+  --green:#1a7f37;
   --weekend:#cf222e;           /* 周末表头强调色 */
   --bar:rgba(255,255,255,.92);
   --sheet-scrim:rgba(31,35,40,.34);
@@ -36,6 +37,7 @@
     --day:#e6edf3;             /* 白班：亮 */
     --night:#8b949e;           /* 夜班：灰 */
     --neg:#f85149;
+    --green:#3fb950;
     --weekend:#f85149;         /* 周末表头强调色 */
     --bar:rgba(13,17,23,.92);
     --sheet-scrim:rgba(1,4,9,.6);
@@ -390,3 +392,38 @@ main{padding:16px;max-width:560px;margin:0 auto}
 .row.ot-sub span{color:var(--faint)}
 .row.ot-sub b{color:var(--muted);font-weight:400}
 .row.ot-sub + .row{border-top:1px solid var(--line-soft);margin-top:3px;padding-top:10px}
+
+/* ===== 统计页：环形图 ===== */
+.ring-wrap{
+  position:relative;width:200px;margin:14px auto 0;
+  aspect-ratio:1/1;
+}
+.ring-box{width:100%;height:100%;display:block}
+.ring-center{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:4px;pointer-events:none;
+}
+.rc-label{font-size:11px;color:var(--faint);letter-spacing:.6px}
+.rc-value{
+  font-family:Georgia,"Times New Roman","Songti SC",serif;
+  font-size:26px;font-weight:400;letter-spacing:-.3px;
+  color:var(--fg);font-variant-numeric:tabular-nums;
+}
+
+/* 图例：留白 + 左对齐，无分割线 */
+.ring-legend{margin:26px 0 30px}
+.lg-row{display:flex;align-items:center;gap:9px;padding:7px 0;font-size:13.5px}
+.lg-sq{width:9px;height:9px;flex-shrink:0}
+.lg-name{flex:1;color:var(--fg)}
+.lg-val{font-variant-numeric:tabular-nums;font-weight:500}
+.lg-empty{text-align:center;color:var(--faint);font-size:13px;padding:8px 0}
+
+/* 汇总三行 */
+.sum-lines{border-top:1px solid var(--line);padding-top:6px}
+.row b.pos{color:var(--green)}
+
+/* 加项/减项 小分段 */
+.seg.tiny{width:96px;flex-shrink:0;margin-bottom:0;border-radius:6px}
+.seg.tiny .seg-btn{height:30px;font-size:12px}
+.ded-top{align-items:center}

@@ -14,7 +14,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
-<link rel="stylesheet" href="style.css?v=15">
+<link rel="stylesheet" href="style.css?v=21">
 </head>
 <body>
 
@@ -59,7 +59,7 @@
     <footer class="site-foot">
       <div class="sf-line">
         <span class="sf-mark">工时</span>
-        <span class="sf-ver" id="verText">v3.0</span>
+        <span class="sf-ver" id="verText">v4.0</span>
       </div>
       <div class="sf-line sf-by">
         made by 杨青
@@ -98,44 +98,27 @@
     <div class="day-head">
       <button class="nav" id="statsBack">← 日历</button>
       <span class="spacer"></span>
-      <span class="cal-title">统计</span>
+      <span class="cal-title" id="stMonthLabel"></span>
     </div>
 
-    <div class="seg" id="rangeSeg">
-      <button class="seg-btn active" data-range="month">本月</button>
-      <button class="seg-btn" data-range="week">本周</button>
-      <button class="seg-btn" data-range="all">全部</button>
+    <div class="ring-wrap">
+      <div class="ring-box" id="ringBox"></div>
+      <div class="ring-center">
+        <span class="rc-label">本月实发</span>
+        <span class="rc-value" id="stNet">¥0.00</span>
+      </div>
     </div>
 
-    <div class="hero">
-      <div class="hero-label">实发合计</div>
-      <div class="hero-value" id="stNet">¥0.00</div>
+    <div class="ring-legend" id="ringLegend"></div>
+
+    <div class="sum-lines">
+      <div class="row"><span>应发合计</span><b id="stGross">¥0.00</b></div>
+      <div class="row plus-row" style="display:none"><span>加项合计</span><b id="stPlus" class="pos">¥0.00</b></div>
+      <div class="row"><span>扣款合计</span><b id="stDeduct" class="neg">-¥0.00</b></div>
+      <div class="row strong"><span>实发合计</span><b id="stNet2">¥0.00</b></div>
     </div>
 
-    <div class="rows">
-      <div class="row"><span>总工时</span><b id="stHours">0.00 h</b></div>
-      <div class="row"><span>白班工时</span><b id="stDayHours">0.00 h</b></div>
-      <div class="row"><span>夜班工时</span><b id="stNightHours">0.00 h</b></div>
-      <div class="row"><span>出勤天数</span><b id="stDays">0 天</b></div>
-      <div class="row"><span>班次数量</span><b id="stCount">0</b></div>
-      <div class="row"><span>平均时薪</span><b id="stAvg">¥0.00</b></div>
-    </div>
-
-    <div class="rows">
-      <div class="row"><span>白班薪资</span><b id="stDayPay">¥0.00</b></div>
-      <div class="row"><span>夜班薪资</span><b id="stNightPay">¥0.00</b></div>
-      <div class="row"><span>加班费</span><b id="stOT">¥0.00</b></div>
-      <div class="row ot-sub"><span>· 工作日 1.5×</span><b id="stOTWork">¥0.00</b></div>
-      <div class="row ot-sub"><span>· 周末 2×</span><b id="stOTWeekend">¥0.00</b></div>
-      <div class="row ot-sub"><span>· 节假日</span><b id="stOTHoliday">¥0.00</b></div>
-      <div class="row strong"><span>应发小计</span><b id="stGross">¥0.00</b></div>
-    </div>
-
-    <div class="rows" id="deductRows">
-      <div class="row strong"><span>扣款合计</span><b id="stDeduct" class="neg">-¥0.00</b></div>
-    </div>
-
-    <div class="hint">扣款项在「设置」里管理</div>
+    <div class="hint">调整项（绩效、全勤、扣款等）在「设置」里管理</div>
   </section>
 
   <!-- ============ 设置 ============ -->
@@ -225,9 +208,13 @@
       </div>
     </div>
 
-    <div class="sec-title">扣款项</div>
-    <div id="deductItems"></div>
-    <button class="btn ghost block" id="btnAddDeduct">+ 添加扣款项</button>
+    <div class="sec-title">薪资调整项</div>
+    <div class="hint" style="padding:0 0 10px">
+        加项：绩效、全勤、补贴等（计为收入）<br>
+        减项：社保、个税、餐费、住宿等（计为扣款）
+      </div>
+      <div id="deductItems"></div>
+    <button class="btn ghost block" id="btnAddDeduct">+ 添加调整项</button>
 
     <div class="sec-title">数据</div>
     <div class="card">
@@ -328,7 +315,7 @@
   </div>
 </div>
 
-<script src="app.js?v=15"></script>
+<script src="app.js?v=21"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {

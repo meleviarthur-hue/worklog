@@ -15,9 +15,9 @@ const DEFAULTS = {
     otWeekend: 2,                             // 周末加班倍率
     overrides: {}                             // { '2026-10-01': 3 } 手动覆盖倍率
   },
-  deductions: [
-    { id: 'd_si',   name: '社保', mode: 'fixed',   value: 300, enabled: true },
-    { id: 'd_tax',  name: '个税', mode: 'percent', value: 3,   enabled: true }
+  adjustments: [
+    { id: 'd_si',   name: '社保', mode: 'fixed',   value: 300, sign: '-', enabled: true },
+    { id: 'd_tax',  name: '个税', mode: 'percent', value: 3,   sign: '-', enabled: true }
   ],
   shifts: []
 };
@@ -27,7 +27,6 @@ let viewMonth = ym(new Date());     // '2026-10'
 let selDate = todayStr();           // 选中日期 / 某日视图
 let editingId = null;
 let formType = 'day';
-let statRange = 'month';
 
 /* ---------- 存储 ---------- */
 function load() {
@@ -43,9 +42,15 @@ function load() {
     }
     delete st.otRate;
     if (!st.overrides || typeof st.overrides !== 'object') st.overrides = {};
+    // 老数据迁移：deductions -> adjustments（都带上负号）
+    let adj = s.adjustments;
+    if (!Array.isArray(adj)) {
+      adj = (Array.isArray(s.deductions) ? s.deductions : clone(DEFAULTS.adjustments))
+        .map(d => Object.assign({}, d, { sign: d.sign || '-' }));
+    }
     return {
       settings: st,
-      deductions: Array.isArray(s.deductions) ? s.deductions : clone(DEFAULTS.deductions),
+      adjustments: adj,
       shifts: Array.isArray(s.shifts) ? s.shifts : []
     };
   } catch (e) { return clone(DEFAULTS); }
@@ -145,8 +150,8 @@ function summarize(shifts) {
   a.otWork = r2(a.otWork); a.otWeekend = r2(a.otWeekend); a.otHoliday = r2(a.otHoliday);
   a.gross = r2(a.base + a.ot);
 
-  const detail = []; let deduct = 0;
-  (state.deductions || []).forEach(d => {
+  const detail = []; let plus = 0, minus = 0;
+  (state.adjustments || []).forEach(d => {
     if (!d.enabled) return;
     const val = Number(d.value) || 0; let amt = 0;
     if (d.mode === 'perDay') amt = val * a.days;
@@ -154,17 +159,83 @@ function summarize(shifts) {
     else if (d.mode === 'percent') amt = a.gross * val / 100;
     else amt = val;
     amt = r2(amt);
-    if (amt !== 0) { detail.push({ name: d.name || '未命名', mode: d.mode, value: val, amount: amt }); deduct += amt; }
+    if (amt === 0) return;
+    // 加项用绝对值（用户填正数即可），减项固定为负
+    const signed = (d.sign === '-' ? -1 : 1) * Math.abs(amt);
+    detail.push({
+      name: d.name || '未命名', mode: d.mode, value: val,
+      sign: d.sign === '-' ? '-' : '+', amount: signed
+    });
+    if (signed >= 0) plus += signed; else minus += -signed;
   });
-  a.deductDetail = detail;
-  a.deduct = r2(deduct);
-  a.net = r2(a.gross - a.deduct);
+  a.adjustDetail = detail;
+  a.grossBase = a.gross;              // 基础+加班
+  a.grossTotal = r2(a.gross + plus);  // 含加项的应发总额
+  a.otSplit = () => {
+    const out = [];
+    if (a.otWork > 0)    out.push({ name: '工作日加班', value: a.otWork,    color: '#d29922' });
+    if (a.otWeekend > 0) out.push({ name: '周末加班',   value: a.otWeekend, color: '#db6d28' });
+    if (a.otHoliday > 0) out.push({ name: '节假日加班', value: a.otHoliday, color: '#cf222e' });
+    return out;
+  };
+  a.plus = r2(plus);        // 加项合计（绩效、全勤等）
+  a.deduct = r2(minus);     // 扣款合计
+  a.net = r2(a.gross + a.plus - a.deduct);   // 实发
   a.avgRate = a.hours > 0 ? r2(a.gross / a.hours) : 0;
   a.byDay = dd;
   return a;
 }
 
-/* ---------- 视图切换 ---------- */
+/* ---------- 环形图 ---------- */
+/**
+ * 生成环形图 SVG。
+ * segments: [{ value, color, name }]
+ * 从 -90° 起顺时针排列，段间留 2° 空隙。
+ */
+function ringSVG(segments, size) {
+  const S = size || 200, cx = S / 2, cy = S / 2;
+  const r = S / 2 - 10, sw = 22;
+  const total = segments.reduce((s, x) => s + Math.max(0, x.value), 0);
+  const CIRC = 2 * Math.PI * r;
+
+  if (total <= 0) {
+    return `<svg viewBox="0 0 ${S} ${S}" width="100%" height="100%">
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none"
+        stroke="var(--line-soft)" stroke-width="${sw}" />
+    </svg>`;
+  }
+
+  const GAP = 2.5;                       // 段间空隙（度）
+  const vis = segments.filter(x => x.value > 0);
+  let cursor = 0, out = '';
+  vis.forEach((seg, i) => {
+    const frac = seg.value / total;
+    let deg = frac * 360;
+    // 只有一段时不留空隙，画整圈
+    const gap = vis.length > 1 ? GAP : 0;
+    const d = Math.max(deg - gap, 0.8);
+    const dash = (d / 360) * CIRC;
+    out += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none"
+      stroke="${seg.color}" stroke-width="${sw}"
+      stroke-dasharray="${dash.toFixed(2)} ${(CIRC - dash).toFixed(2)}"
+      stroke-dashoffset="${(-(cursor + gap / 2) / 360 * CIRC).toFixed(2)}"
+      transform="rotate(-90 ${cx} ${cy})" />`;
+    cursor += deg;
+  });
+  return `<svg viewBox="0 0 ${S} ${S}" width="100%" height="100%">${out}</svg>`;
+}
+
+/** 取应发构成的所有色块（基础 / 加班 / 各加项） */
+function grossSegments(agg) {
+  const segs = [];
+  const P = ['#2ea44f', '#d29922', '#0075ca', '#8250df', '#1a7f37'];
+  if (agg.base > 0) segs.push({ name: '基础工资', value: agg.base, color: P[0] });
+  agg.otSplit().forEach(x => { if (x.value > 0) segs.push(x); });
+  (agg.adjustDetail || []).filter(d => d.sign === '+').forEach((d, i) => {
+    segs.push({ name: d.name, value: d.amount, color: P[(i + 2) % P.length] });
+  });
+  return segs;
+}
 function go(v) {
   document.querySelectorAll('.view').forEach(el => el.classList.toggle('active', el.id === 'view-' + v));
   if (v === 'calendar') renderCalendar();
@@ -221,7 +292,7 @@ function renderCalendar() {
   const monthShifts = state.shifts.filter(s => s.date.slice(0, 7) === viewMonth);
   const agg = summarize(monthShifts);
   $('mHours').textContent = agg.hours.toFixed(2) + ' h';
-  $('mGross').textContent = money(agg.gross);
+  $('mGross').textContent = money(agg.grossTotal);
   $('mNet').textContent = money(agg.net);
   $('monthTotal').textContent = agg.count ? `${agg.days} 天有记录` : '本月无记录';
 }
@@ -264,34 +335,44 @@ function renderDay() {
 
 /* ---------- 统计 ---------- */
 function renderStats() {
-  const [a, b] = rangeOf(statRange);
+  // 只看本月
+  const [a, b] = [monthStart(selDate), monthEnd(selDate)];
   const shifts = state.shifts.filter(s => s.date >= a && s.date <= b);
   const agg = summarize(shifts);
+  // 本月没有任何班次时，不做计算（固定加项/扣款也不算），全部归零
+  if (!shifts.length) {
+    agg.plus = 0; agg.deduct = 0; agg.grossTotal = 0; agg.net = 0;
+    agg.adjustDetail = [];
+  }
+
+  // 环内：净收入
   $('stNet').textContent = money(agg.net);
-  $('stHours').textContent = agg.hours.toFixed(2) + ' h';
-  $('stDayHours').textContent = agg.dayHours.toFixed(2) + ' h';
-  $('stNightHours').textContent = agg.nightHours.toFixed(2) + ' h';
-  $('stDays').textContent = agg.days + ' 天';
-  $('stCount').textContent = agg.count;
-  $('stAvg').textContent = money(agg.avgRate);
-  $('stDayPay').textContent = money(agg.dayPay);
-  $('stNightPay').textContent = money(agg.nightPay);
-  $('stOT').textContent = money(agg.ot);
-  $('stOTWork').textContent = money(agg.otWork);
-  $('stOTWeekend').textContent = money(agg.otWeekend);
-  $('stOTHoliday').textContent = money(agg.otHoliday);
-  // 小时工不显示加班拆分
-  const hourly = state.settings.payType === 'hourly';
-  document.querySelectorAll('.ot-sub').forEach(el => el.style.display = hourly ? 'none' : '');
-  $('stGross').textContent = money(agg.gross);
+  $('stMonthLabel').textContent = selDate.slice(0, 7).replace('-', ' 年 ') + ' 月';
+
+  // 环形图 + 图例（没有任何工时记录时显示灰色空环）
+  const segs = (agg.base > 0 || agg.ot > 0) ? grossSegments(agg) : [];
+  $('ringBox').innerHTML = ringSVG(segs, 200);
 
   const MODE = { fixed: '固定', perDay: '/天', perHour: '/时', percent: '%' };
-  const dr = $('deductRows');
-  let html = (agg.deductDetail.length
-    ? agg.deductDetail.map(d => `<div class="row"><span>${esc(d.name)} <span style="color:#8c959f;font-size:11px">${d.mode === 'percent' ? d.value + '%' : money(d.value) + MODE[d.mode]}</span></span><b class="neg">${money(d.amount)}</b></div>`).join('')
-    : '');
-  html += `<div class="row strong"><span>扣款合计</span><b class="neg">-${money(agg.deduct).replace('-', '')}</b></div>`;
-  dr.innerHTML = html;
+  const legend = [];
+  segs.forEach(x => legend.push({ name: x.name, color: x.color, value: x.value }));
+  (agg.adjustDetail || []).filter(d => d.sign === '-').forEach(d =>
+    legend.push({ name: d.name, color: 'var(--neg)', value: d.amount }));
+
+  $('ringLegend').innerHTML = legend.length
+    ? legend.map(x => `<div class="lg-row">
+        <span class="lg-sq" style="background:${x.color}"></span>
+        <span class="lg-name">${esc(x.name)}</span>
+        <span class="lg-val ${x.value < 0 ? 'neg' : ''}">${money(x.value)}</span>
+      </div>`).join('')
+    : '<div class="lg-empty">本月还没有记录，去日历记一笔吧</div>';
+
+  // 应发 / 扣款 / 实发 三行小结
+  $('stGross').textContent = money(agg.grossTotal);
+  $('stPlus').textContent = money(agg.plus);
+  $('stDeduct').textContent = '-' + money(agg.deduct).replace('-', '');
+  $('stNet2').textContent = money(agg.net);
+  document.querySelector('.row.plus-row').style.display = agg.plus > 0 ? '' : 'none';
 }
 
 /* ---------- 设置 ---------- */
@@ -329,13 +410,17 @@ const MODE_OPTIONS = [
 ];
 function renderDeductions() {
   const box = $('deductItems');
-  if (!state.deductions.length) {
-    box.innerHTML = '<div class="hint" style="padding:12px 0">还没有扣款项</div>';
+  if (!state.adjustments.length) {
+    box.innerHTML = '<div class="hint" style="padding:12px 0">还没有调整项</div>';
     return;
   }
-  box.innerHTML = state.deductions.map(d => `
+  box.innerHTML = state.adjustments.map(d => `
     <div class="ded" data-id="${d.id}">
       <div class="ded-top">
+        <div class="seg tiny" data-sign="${d.id}">
+          <button class="seg-btn ${d.sign !== '-' ? 'active' : ''}" data-val="+">加项</button>
+          <button class="seg-btn ${d.sign === '-' ? 'active' : ''}" data-val="-">减项</button>
+        </div>
         <input type="text" class="d-name" value="${esc(d.name)}" placeholder="名称">
         <button class="ded-x" data-del="${d.id}">×</button>
       </div>
@@ -475,14 +560,6 @@ document.addEventListener('DOMContentLoaded', () => {
     save(); closeSheet(); go('day');
   };
 
-  document.querySelectorAll('#rangeSeg .seg-btn').forEach(b => {
-    b.onclick = () => {
-      statRange = b.dataset.range;
-      document.querySelectorAll('#rangeSeg .seg-btn').forEach(x => x.classList.toggle('active', x === b));
-      renderStats();
-    };
-  });
-
   // 设置自动保存
   const autoSave = () => {
     const s = state.settings;
@@ -531,14 +608,29 @@ document.addEventListener('DOMContentLoaded', () => {
     save(); $('multPop').classList.remove('show'); renderDay();
   };
 
-  // 扣款项
+  // 调整项
   $('btnAddDeduct').onclick = () => {
-    state.deductions.push({ id: 'd' + Date.now().toString(36), name: '', mode: 'fixed', value: 0, enabled: true });
+    state.adjustments.push({ id: 'd' + Date.now().toString(36), name: '', mode: 'fixed', value: 0, sign: '-', enabled: true });
     save(); renderDeductions();
   };
+  // 加项 / 减项 切换
+  $('deductItems').addEventListener('click', e => {
+    const btn = e.target.closest('[data-sign] .seg-btn');
+    if (btn) {
+      const id = btn.parentElement.dataset.sign;
+      const d = state.adjustments.find(x => x.id === id);
+      if (d) { d.sign = btn.dataset.val; save(); renderDeductions(); }
+      return;
+    }
+    const del = e.target.closest('[data-del]');
+    if (del) {
+      state.adjustments = state.adjustments.filter(x => x.id !== del.dataset.del);
+      save(); renderDeductions();
+    }
+  });
   $('deductItems').addEventListener('input', e => {
     const it = e.target.closest('.ded'); if (!it) return;
-    const d = state.deductions.find(x => x.id === it.dataset.id); if (!d) return;
+    const d = state.adjustments.find(x => x.id === it.dataset.id); if (!d) return;
     if (e.target.classList.contains('d-name')) d.name = e.target.value;
     if (e.target.classList.contains('d-val')) d.value = Number(e.target.value) || 0;
     if (e.target.classList.contains('d-on')) d.enabled = e.target.checked;
@@ -546,13 +638,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   $('deductItems').addEventListener('change', e => {
     const it = e.target.closest('.ded'); if (!it) return;
-    const d = state.deductions.find(x => x.id === it.dataset.id); if (!d) return;
+    const d = state.adjustments.find(x => x.id === it.dataset.id); if (!d) return;
     if (e.target.classList.contains('d-mode')) { d.mode = e.target.value; save(); }
-  });
-  $('deductItems').addEventListener('click', e => {
-    const b = e.target.closest('[data-del]'); if (!b) return;
-    state.deductions = state.deductions.filter(x => x.id !== b.dataset.del);
-    save(); renderDeductions();
   });
 
   // 导出
@@ -577,7 +664,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!d.shifts) return alert('文件格式不正确');
         state = {
           settings: Object.assign({}, DEFAULTS.settings, d.settings || {}),
-          deductions: Array.isArray(d.deductions) ? d.deductions : clone(DEFAULTS.deductions),
+          adjustments: Array.isArray(d.adjustments)
+            ? d.adjustments
+            : (Array.isArray(d.deductions) ? d.deductions.map(x => Object.assign({}, x, { sign: x.sign || '-' })) : clone(DEFAULTS.adjustments)),
           shifts: d.shifts
         };
         save(); go('calendar'); alert('导入成功，共 ' + state.shifts.length + ' 条');
