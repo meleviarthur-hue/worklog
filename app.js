@@ -194,7 +194,9 @@ function summarize(shifts) {
  */
 function ringSVG(segments, size) {
   const S = size || 200, cx = S / 2, cy = S / 2;
-  const r = S / 2 - 10, sw = 22;
+  const sw = 22;                    // 环的线宽
+  // 半径要减去线宽的一半再留余量，否则外缘会超出画布被裁平
+  const r = S / 2 - sw / 2 - 5;
   const total = segments.reduce((s, x) => s + Math.max(0, x.value), 0);
   const CIRC = 2 * Math.PI * r;
 
