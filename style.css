@@ -13,6 +13,7 @@
   --day:#1f2328;               /* 白班：黑 */
   --night:#656d76;             /* 夜班：灰 */
   --neg:#cf222e;
+  --weekend:#cf222e;           /* 周末表头强调色 */
   --bar:rgba(255,255,255,.92);
   --sheet-scrim:rgba(31,35,40,.34);
   --shadow:0 1px 3px rgba(0,0,0,.08);
@@ -35,6 +36,7 @@
     --day:#e6edf3;             /* 白班：亮 */
     --night:#8b949e;           /* 夜班：灰 */
     --neg:#f85149;
+    --weekend:#f85149;         /* 周末表头强调色 */
     --bar:rgba(13,17,23,.92);
     --sheet-scrim:rgba(1,4,9,.6);
     --shadow:0 1px 3px rgba(0,0,0,.4);
@@ -92,6 +94,7 @@ main{padding:16px;max-width:560px;margin:0 auto}
   text-align:center;font-size:11px;color:var(--faint);
   padding:6px 0;font-weight:500;
 }
+.cal-week span.we{color:var(--weekend)}
 .cal-grid{
   display:grid;grid-template-columns:repeat(7,1fr);
   border-top:1px solid var(--line-soft);
@@ -348,9 +351,17 @@ main{padding:16px;max-width:560px;margin:0 auto}
   display:flex;flex-direction:column;align-items:center;gap:12px;
 }
 .pop-title{font-size:13.5px;font-weight:600;letter-spacing:.3px}
-.pop-qr{width:100%;max-width:240px;display:block;border-radius:8px}
+/* 赞赏码原图是深底，深色模式下会和弹窗融在一起 —— 用浅色底托住并加描边 */
+.pop-qr-wrap{
+  width:100%;max-width:240px;background:#fff;
+  border:1px solid var(--line-soft);border-radius:8px;
+  padding:6px;line-height:0;
+}
+.pop-qr{width:100%;display:block;border-radius:4px}
 .pop-sub{font-size:11.5px;color:var(--muted)}
 .pop-card .btn{margin-bottom:0}
+.pop-card .btn.block{background:var(--hover);border-color:var(--line);color:var(--fg)}
+.pop-card .btn.block:hover{background:var(--line-soft)}
 
 /* ---- toast / tip ---- */
 .save-tip{text-align:center;font-size:12px;color:var(--fg);height:18px;margin-top:10px;font-weight:500}

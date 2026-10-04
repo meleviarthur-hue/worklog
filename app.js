@@ -6,8 +6,8 @@ const $ = id => document.getElementById(id);
 
 const DEFAULTS = {
   settings: {
-    dayStart: '08:00', dayEnd: '20:00',
-    nightStart: '20:00', nightEnd: '08:00',
+    dayStart: '08:00', dayEnd: '20:00', dayBreak: 0,
+    nightStart: '20:00', nightEnd: '08:00', nightBreak: 0,
     dayRate: 20, nightRate: 25,
     otAfter: 8, otRate: 1.5
   },
@@ -245,6 +245,8 @@ function renderSettings() {
   const s = state.settings;
   $('setDayStart').value = s.dayStart; $('setDayEnd').value = s.dayEnd;
   $('setNightStart').value = s.nightStart; $('setNightEnd').value = s.nightEnd;
+  $('setDayBreak').value = s.dayBreak || 0;
+  $('setNightBreak').value = s.nightBreak || 0;
   $('setDayRate').value = s.dayRate; $('setNightRate').value = s.nightRate;
   $('setOTAfter').value = s.otAfter; $('setOTRate').value = s.otRate;
   renderDeductions();
@@ -302,7 +304,7 @@ function openSheet(id) {
     const t = (has.includes('day') && !has.includes('night')) ? 'night' : 'day';
     setType(t);
     fillPreset(t);
-    $('fBreak').value = 0; $('fRate').value = ''; $('fNote').value = '';
+    $('fRate').value = ''; $('fNote').value = '';
     $('btnDeleteShift').hidden = true;
   }
   updateCalc();
@@ -317,8 +319,13 @@ function setType(t) {
 /** 关键：按类型自动填入自定义默认时段 */
 function fillPreset(t) {
   const s = state.settings;
-  if (t === 'night') { $('fStart').value = s.nightStart; $('fEnd').value = s.nightEnd; }
-  else { $('fStart').value = s.dayStart; $('fEnd').value = s.dayEnd; }
+  if (t === 'night') {
+    $('fStart').value = s.nightStart; $('fEnd').value = s.nightEnd;
+    $('fBreak').value = s.nightBreak || 0;
+  } else {
+    $('fStart').value = s.dayStart; $('fEnd').value = s.dayEnd;
+    $('fBreak').value = s.dayBreak || 0;
+  }
 }
 function readForm() {
   return {
@@ -412,6 +419,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const s = state.settings;
     s.dayStart = $('setDayStart').value; s.dayEnd = $('setDayEnd').value;
     s.nightStart = $('setNightStart').value; s.nightEnd = $('setNightEnd').value;
+    s.dayBreak = Number($('setDayBreak').value) || 0;
+    s.nightBreak = Number($('setNightBreak').value) || 0;
     s.dayRate = Number($('setDayRate').value) || 0;
     s.nightRate = Number($('setNightRate').value) || 0;
     s.otAfter = Number($('setOTAfter').value) || 0;
@@ -419,7 +428,7 @@ document.addEventListener('DOMContentLoaded', () => {
     save();
     const t = $('saveTip'); t.textContent = '已保存'; setTimeout(() => t.textContent = '', 1200);
   };
-  ['setDayStart', 'setDayEnd', 'setNightStart', 'setNightEnd', 'setDayRate', 'setNightRate', 'setOTAfter', 'setOTRate']
+  ['setDayStart', 'setDayEnd', 'setNightStart', 'setNightEnd', 'setDayBreak', 'setNightBreak', 'setDayRate', 'setNightRate', 'setOTAfter', 'setOTRate']
     .forEach(id => { $(id).addEventListener('change', autoSave); });
 
   // 扣款项

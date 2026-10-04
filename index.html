@@ -14,7 +14,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
-<link rel="stylesheet" href="style.css?v=10">
+<link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
 
@@ -38,7 +38,7 @@
     </div>
 
     <div class="cal-week">
-      <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
+      <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span class="we">六</span><span class="we">日</span>
     </div>
     <div class="cal-grid" id="calGrid"></div>
 
@@ -59,7 +59,7 @@
     <footer class="site-foot">
       <div class="sf-line">
         <span class="sf-mark">工时</span>
-        <span class="sf-ver" id="verText">v2.0 · 2026.10</span>
+        <span class="sf-ver" id="verText">v2.1</span>
       </div>
       <div class="sf-line sf-by">
         made by 杨青
@@ -154,6 +154,19 @@
         </div>
       </div>
       <div class="hint">新建班次时自动填入这两个时段，不用每次改。</div>
+    </div>
+
+    <div class="sec-title">默认休息时长</div>
+    <div class="card">
+      <div class="field">
+        <span>白班休息 (分钟)</span>
+        <input type="number" id="setDayBreak" step="5" inputmode="numeric" placeholder="0">
+      </div>
+      <div class="field">
+        <span>夜班休息 (分钟)</span>
+        <input type="number" id="setNightBreak" step="5" inputmode="numeric" placeholder="0">
+      </div>
+      <div class="hint">新建班次时自动扣除，单条班次里仍可单独修改。</div>
     </div>
 
     <div class="sec-title">时薪</div>
@@ -259,13 +272,13 @@
   <div class="pop-scrim"></div>
   <div class="pop-card">
     <div class="pop-title">请我喝杯水</div>
-    <img class="pop-qr" src="icons/reward.png" alt="赞赏码">
+    <div class="pop-qr-wrap"><img class="pop-qr" src="icons/reward.png" alt="赞赏码"></div>
     <div class="pop-sub">微信扫一扫 · 心意到了就好</div>
     <button class="btn block" id="rewardClose">关闭</button>
   </div>
 </div>
 
-<script src="app.js?v=10"></script>
+<script src="app.js?v=12"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {

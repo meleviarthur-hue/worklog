@@ -1,10 +1,10 @@
 /* Service Worker：离线可用 */
-const CACHE = 'worklog-v10';
+const CACHE = 'worklog-v12';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=10',
-  './app.js?v=10',
+  './style.css?v=12',
+  './app.js?v=12',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
