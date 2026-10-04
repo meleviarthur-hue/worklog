@@ -5,10 +5,11 @@
     <em>为两班倒工人做的工时与薪资计算器</em>
   </p>
   <p align="center">
-    <img src="https://img.shields.io/badge/版本-v2.0-1f2328?style=flat-square" alt="version" />
-    <img src="https://img.shields.io/badge/类型-PWA-1f2328?style=flat-square" alt="pwa" />
-    <img src="https://img.shields.io/badge/依赖-零-1f2328?style=flat-square" alt="zero deps" />
-    <img src="https://img.shields.io/badge/数据-仅本地-1f2328?style=flat-square" alt="local only" />
+    <img src="https://img.shields.io/github/v/tag/meleviarthur-hue/worklog?style=flat-square&label=%E7%89%88%E6%9C%AC&color=2ea44f" alt="version" />
+    <img src="https://img.shields.io/badge/%E7%B1%BB%E5%9E%8B-PWA-0075ca?style=flat-square" alt="pwa" />
+    <img src="https://img.shields.io/badge/%E4%BE%9D%E8%B5%96-%E9%9B%B6-0075ca?style=flat-square" alt="zero deps" />
+    <img src="https://img.shields.io/badge/%E6%95%B0%E6%8D%AE-%E4%BB%85%E6%9C%AC%E5%9C%B0-2ea44f?style=flat-square" alt="local only" />
+    <img src="https://img.shields.io/badge/%E8%AE%B8%E5%8F%AF-%E4%BF%9D%E7%95%99%E6%89%80%E6%9C%89%E6%9D%83-6e7681?style=flat-square" alt="license" />
   </p>
   <p align="center">
     <a href="https://meleviarthur-hue.github.io/worklog/"><b>👉 在线使用</b></a>
@@ -139,6 +140,13 @@ git checkout v1.0
 一个人做的，给自己和同事用。
 
 如果它帮你算清了工资 → [请我喝杯水](https://meleviarthur-hue.github.io/worklog/)
+
+## 许可
+
+版权所有 © 2026 杨青。**保留所有权利。**
+
+本作品可供个人学习、研究使用；未经作者许可，不得复制、修改、分发或用于商业用途。
+详见 [LICENSE](LICENSE)。
 
 <div align="center">
 <br>
